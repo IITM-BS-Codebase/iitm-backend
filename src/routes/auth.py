@@ -1,13 +1,14 @@
 import requests
 import os
 from flask import Blueprint, redirect, request
-from flask_jwt_extended import current_user, create_access_token
+from flask_jwt_extended import create_access_token
 
-from ..config import *
-from ..models import DiscordOAuth, User
+from src.config import *
+from src.models import DiscordOAuth, User
+from src.database import db
 
+discord_bp = Blueprint("discord_bp", __name__, url_prefix='/discord/auth')
 
-discord_bp = Blueprint("auth_bp",__name__, url_prefix='/discord/auth')
 
 @discord_bp.route("/login")
 def login():
@@ -16,13 +17,13 @@ def login():
     """
     return redirect(os.environ.get("DISCORD_OAUTH_URL"))
 
+
 @discord_bp.route("/login/callback")
 def callback():
     """
     Returned from discord after oauth
     """
-
-    token_access_code = request.args.get("code",None)
+    token_access_code = request.args.get("code", None)
     data = {
         "client_id": os.environ.get("DISCORD_CLIENT_ID"),
         "client_secret": os.environ.get("DISCORD_CLIENT_SECRET"),
@@ -47,14 +48,25 @@ def callback():
             },
         )
 
-        user = User(r.json(), DiscordOAuth(oauth_data))
+        user = User.query.filter(User.id == r.json()['id']).one_or_none()
+        if not user:
+            #user does not exist create entry in db
+            user = User(r.json())
+            print("created user", user)
+            user_oauth = DiscordOAuth(oauth_data, user.id)
+        else:
+            #user exists, update oauth
+            user_oauth = DiscordOAuth.query.filter(DiscordOAuth.user_id == user.id).first() 
+            user_oauth.update_oauth(oauth_data)
+
         token = create_access_token(identity=user.id, additional_claims={
-                                    'roles': user.get_roles(),**user.discord_oauth.__dict__()})
+                                    'roles': user.get_roles()})
 
-        return {"Token":token}
- 
+        db.session.add(user)
+        db.session.add(user_oauth)
+        db.session.flush()
+        db.session.commit()
 
-
+        return {"Token": token}
 
     return redirect(os.environ.get("FRONTEND_URL"))
-

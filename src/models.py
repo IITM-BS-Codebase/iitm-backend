@@ -1,42 +1,53 @@
 import requests
+import time
 from flask_login import UserMixin, AnonymousUserMixin
 from flask import request
 from flask_jwt_extended import verify_jwt_in_request, get_jwt, current_user
 from .database import db
 from .config import *
 
+
+users_roles = db.Table(
+    'users_roles',
+    db.Column('user_id', db.BigInteger, db.ForeignKey('user.id')),
+    db.Column('role_id', db.Integer, db.ForeignKey('role.id'))
+)
+
 class DiscordOAuth(db.Model):
     """
     Class to represent user's OAuth data.
     """
+    __tablename__ = 'discord_oauth'
+    user_id = db.Column(db.BigInteger,db.ForeignKey('user.id'),primary_key=True, )
+    access_token = db.Column(db.String(100), unique=True)
+    refresh_token = db.Column(db.String(100), unique=True)
+    valid_until = db.Column(db.BigInteger)
+    token_type = db.Column(db.String(50))
+    scope = db.Column(db.String(200))
 
-    access_token = db.Column(db.String) 
-    refresh_token = db.Column(db.String)
-    expires_in = db.Column(db.DateTime)
-    token_type = db.Column(db.String)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id')) 
-    def __init__(self,data: dict) -> None:
+    def __init__(self,data: dict, user_id: int) -> None:
+        self.user_id = user_id
         self.access_token = data["access_token"]
         self.refresh_token = data["refresh_token"]
-        self.expires_in = data["expires_in"]
+        self.valid_until = time.time() + int(data["expires_in"])
         self.token_type = data["token_type"]
         self.scope = data["scope"]
 
-    def __dict__(self):
+    def update_oauth(self, data: dict):
+        self.access_token = data["access_token"]
+        self.refresh_token = data["refresh_token"]
+        self.valid_until = time.time() + int(data["expires_in"])
+        self.token_type = data["token_type"]
+        self.scope = data["scope"]
+
+    def to_dict(self):
         return {
             "access_token": self.access_token,
             "refresh_token": self.refresh_token,
-            "expires_in": self.expires_in,
+            "valid_until": self.valid_until,
             "token_type": self.token_type,
             "scope": self.scope,
         }
-
-
-users_roles = db.Table(
-    'users_roles',
-    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
-    db.Column('role_id', db.Integer, db.ForeignKey('role.id'))
-)
 
 
 class Role(db.Model):
@@ -53,41 +64,41 @@ class Role(db.Model):
 class User(UserMixin, db.Model):
 
     __tablename__ = "user"
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.Text, unique=True)
+    id = db.Column(db.BigInteger, primary_key=True)
+    username = db.Column(db.String(100), unique=True)
     discriminator = db.Column(db.Integer)
-    avatar = db.Column(db.Text)
+    avatar = db.Column(db.String(100))
     roles = db.relationship(
         'Role',
         secondary=users_roles,
         backref=db.backref('users',lazy='dynamic')
         )
+    discord_oauth = db.relationship('DiscordOAuth',backref=db.backref('user'),uselist=False)
 
     def __repr__(self):
         return f"{self.id}"
 
-    def __init__(self, data: dict, oauth_data: DiscordOAuth, roles=[]) -> None:
+    def __init__(self, data: dict,roles=[]) -> None:
         self.id = data["id"]
         self.username = data["username"]
         self.discriminator = data["discriminator"]
         #handle default avatars
         if data["avatar"]:
-            # if DISCORD_CDN_ENDPOINT in data["avatar"]:
-            #     self.avatar = data["avatar"]
-            # else:
             self.avatar = (
                 f"{DISCORD_CDN_ENDPOINT}/avatars/{data['id']}/{data['avatar']}"
             )
         else:
             self.avatar = "https://cdn.discordapp.com/embed/avatars/4.png"
 
-        self.discord_oauth = oauth_data
         for role in roles:
             if to_add := Role.query.filter(Role.name == role).first():
                 self.add_role(to_add)
 
     def add_role(self, role):
         self.roles.append(role) 
+
+    def get_roles(self):
+        return [role.name for role in self.roles]
 
 
     @classmethod
@@ -117,10 +128,10 @@ class User(UserMixin, db.Model):
 
         response = requests.request("GET", url, headers=headers)
         response = response.json()
-        return cls(response, oauth_data)
+        return cls(response)
 
 
-    def __dict__(self) -> dict:
+    def to_dict(self) -> dict:
         res = {
             "id": self.id,
             "username": self.username,

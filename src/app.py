@@ -1,21 +1,23 @@
-from functools import wraps
 from flask import Flask
 from flask_restful import Api
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, verify_jwt_in_request, get_current_user
-from flask_jwt_extended.exceptions import NoAuthorizationError
+from flask_jwt_extended import JWTManager
 
-from .config import LocalDevelopmentConfig
-from .database import db
-from .validation import BusinessValidationError
-from .models import User
+from src.config import LocalDevelopmentConfig
+from src.database import db
+from src.validation import BusinessValidationError
+from src.models import User
 
 def create_app(): 
-
+    """
+    Create flask app and setup default configuration
+    """
     app = Flask(__name__)
-    cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+    cors = CORS(app)
     bcrypt = Bcrypt(app)
+
+    #change this in prod
     app.config.from_object(LocalDevelopmentConfig)
 
     db.init_app(app)
@@ -24,14 +26,13 @@ def create_app():
     with app.app_context():
         db.create_all()
 
-    @app.errorhandler(Exception)
-    def handle_exception(e):
-        app.log_exception(e)
-        return BusinessValidationError(error_code=400, error_message=e.message)
 
     return app, api
 
 def setup_auth(app):
+    """
+    Setup JWT authentication
+    """
 
     jwt = JWTManager(app)
 
@@ -40,31 +41,17 @@ def setup_auth(app):
         """ callback for fetching authenticated user from db """
         print("IN user lookup loader")
         identity = jwt_data["sub"]
-        return User.query.filter_by(id=identity).one_or_none()
+        return User.query.filter_by(id=int(identity)).one_or_none()
 
 
-def setup_routes(api):
+def setup_routes(app):
+    """
+    Register blueprints and any API resources
+    """
 
-    # from .api.auth import LoginAPI, SignupAPI
-    # from .api.home import Home, AdminHome
+    from .routes.auth import discord_bp
+    from .routes.basic import basic_bp
+    
+    app.register_blueprint(discord_bp)
+    app.register_blueprint(basic_bp)
 
-    # api.add_resource(LoginAPI,"/api/login")
-    # api.add_resource(SignupAPI,"/api/signup")
-    # api.add_resource(Home, "/api/home")
-    # api.add_resource(AdminHome, "/api/admin")
-    pass
-
-def check_any_role(roles):
-    def decorator(f):
-        @wraps(f)
-        def decorator_function(*args, **kwargs):
-            # calling @jwt_required()
-            verify_jwt_in_request()
-            # fetching current user from db
-            current_user = get_current_user()
-            # checking user role
-            if not set(current_user.get_roles()).intersection(roles):
-                raise NoAuthorizationError("Role is not allowed.")
-            return f(*args, **kwargs)
-        return decorator_function
-    return decorator
