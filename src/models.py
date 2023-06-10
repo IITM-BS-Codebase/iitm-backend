@@ -1,10 +1,9 @@
 import requests
 import time
-from flask_login import UserMixin, AnonymousUserMixin
-from flask_jwt_extended import verify_jwt_in_request, get_jwt, current_user
+from flask_login import UserMixin
 from .database import db
 from .config import *
-
+from .utils import get_current_user
 
 users_roles = db.Table(
     'users_roles',
@@ -106,14 +105,10 @@ class User(UserMixin, db.Model):
         Function to get discord user from request.
         """
 
-        if verify_jwt_in_request():
-            data = get_jwt() 
-            return User.get_from_token(DiscordOAuth(data))
-
-        if not isinstance(current_user, AnonymousUserMixin) and current_user:
-            return current_user
-        else:
-            raise Exception("No user logged in")
+        user = get_current_user()
+        if user is None:
+            raise Exception('No user logged in')
+        return user
 
     @classmethod
     def get_from_token(cls, oauth_data: DiscordOAuth) -> "User":

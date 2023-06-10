@@ -28,3 +28,4 @@ SQLAlchemy==2.0.15
 typing_extensions==4.6.3
 urllib3==2.0.2
 Werkzeug==2.3.4
+paseto-py @ git+https://git.5ht2.me/lmaotrigine/paseto.py@v0.1.0
