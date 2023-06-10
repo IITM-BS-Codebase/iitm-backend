@@ -6,7 +6,6 @@ from flask_jwt_extended import JWTManager
 
 from src.config import LocalDevelopmentConfig
 from src.database import db
-from src.validation import BusinessValidationError
 from src.models import User
 
 def create_app(): 
@@ -39,7 +38,6 @@ def setup_auth(app):
     @jwt.user_lookup_loader
     def user_lookup_callback(_jwt_header, jwt_data):
         """ callback for fetching authenticated user from db """
-        print("IN user lookup loader")
         identity = jwt_data["sub"]
         return User.query.filter_by(id=int(identity)).one_or_none()
 

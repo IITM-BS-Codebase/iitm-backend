@@ -1,7 +1,6 @@
 import requests
 import time
 from flask_login import UserMixin, AnonymousUserMixin
-from flask import request
 from flask_jwt_extended import verify_jwt_in_request, get_jwt, current_user
 from .database import db
 from .config import *

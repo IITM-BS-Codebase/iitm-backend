@@ -15,7 +15,6 @@ class Config():
     WTF_CSRF_ENABLED = False
 
 class LocalDevelopmentConfig(Config):
-    print("got to local dev config")
     SQLALCHEMY_DATABASE_URI = os.environ.get("DB_CONNECTION_STRING")
     DEBUG = True
     SECRET_KEY = os.environ.get("SECRET_KEY")
