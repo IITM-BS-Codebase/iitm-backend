@@ -1,21 +1,31 @@
 import requests
 import os
-from flask import Blueprint, redirect, request
+import secrets
+from urllib.parse import urlencode
+from flask import Blueprint, redirect, request, make_response
 from flask_jwt_extended import create_access_token
+from flask_bcrypt import generate_password_hash, check_password_hash
 
 from src.config import *
 from src.models import DiscordOAuth, User
 from src.database import db
 
 discord_bp = Blueprint("discord_bp", __name__, url_prefix='/discord/auth')
-
+state = None
 
 @discord_bp.route("/login")
 def login():
     """
     Redirect to discord auth
     """
-    return redirect(os.environ.get("DISCORD_OAUTH_URL"))
+    global state
+    state = secrets.token_urlsafe()
+    state_param = urlencode({
+        "state": generate_password_hash(state)
+    })
+
+    redirect_url = os.environ.get("DISCORD_OAUTH_URL") + f"&{state_param}"
+    return redirect(redirect_url)
 
 
 @discord_bp.route("/login/callback")
@@ -24,6 +34,10 @@ def callback():
     Returned from discord after oauth
     """
     token_access_code = request.args.get("code", None)
+    state_hash = request.args.get("state")
+    if not state_hash or not check_password_hash(password=state,pw_hash=state_hash):
+        return "invalid state",400
+
     data = {
         "client_id": os.environ.get("DISCORD_CLIENT_ID"),
         "client_secret": os.environ.get("DISCORD_CLIENT_SECRET"),
@@ -52,7 +66,6 @@ def callback():
         if not user:
             #user does not exist create entry in db
             user = User(r.json())
-            print("created user", user)
             user_oauth = DiscordOAuth(oauth_data, user.id)
         else:
             #user exists, update oauth
