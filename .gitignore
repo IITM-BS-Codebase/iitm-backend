@@ -158,3 +158,11 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+
+# poetry stuff, which isn't really what's being used in this project
+poetry.lock
+pyproject.toml
+
+# the right way to store secrets
+/config.py
