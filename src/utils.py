@@ -66,7 +66,7 @@ def validate_request_state(state: str, request: Request) -> dict[str, Any] | Non
 
 
 def get_current_user() -> User | None:
-    payload = validate_request_state(request.args.get('state', ''), request)
+    payload = validate_request_state(request.headers.get('Authorization', ''), request)
     if payload is None:
         return None
     return User.query.filter_by(id=int(payload['sub'])).one_or_none()
@@ -100,9 +100,9 @@ def check_discord_auth():
     def decorator(f):
         @wraps(f)
         def decorator_function(*args, **kwargs):
-            payload = validate_request_state(request.args.get('state', ''), request)
+            payload = validate_request_state(request.headers.get('Authorization', ''), request)
             if payload is None:
-                raise NoAuthorizationError("Invalid state!")
+                raise NoAuthorizationError("Invalid Authorization Header!")
             sub = payload['sub']
             discord_oauth = DiscordOAuth.query.filter(DiscordOAuth.user_id == sub).one_or_none()
             if not discord_oauth:
