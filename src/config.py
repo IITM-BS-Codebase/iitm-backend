@@ -17,10 +17,7 @@ class Config():
 class LocalDevelopmentConfig(Config):
     SQLALCHEMY_DATABASE_URI = os.environ.get("DB_CONNECTION_STRING")
     DEBUG = True
-    SECRET_KEY = os.environ.get("SECRET_KEY")
-    SECURITY_PASSWORD_HASH = "bcrypt"    
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
-    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+    PASETO_PRIVATE_KEY = os.environ.get("PASETO_PRIVATE_KEY")
 
 
 MAIN_GUILD_ID = 1104485753758687333

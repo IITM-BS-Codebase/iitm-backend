@@ -3,7 +3,6 @@ import time
 from flask_login import UserMixin
 from .database import db
 from .config import *
-from .utils import get_current_user
 
 users_roles = db.Table(
     'users_roles',
@@ -98,17 +97,6 @@ class User(UserMixin, db.Model):
     def get_roles(self):
         return [role.name for role in self.roles]
 
-
-    @classmethod
-    def authenticate(cls):
-        """
-        Function to get discord user from request.
-        """
-
-        user = get_current_user()
-        if user is None:
-            raise Exception('No user logged in')
-        return user
 
     @classmethod
     def get_from_token(cls, oauth_data: DiscordOAuth) -> "User":

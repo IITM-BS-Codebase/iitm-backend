@@ -1,27 +1,39 @@
+from __future__ import annotations
+import json
+import os
+
 import time
 from functools import wraps
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from flask import Request, request
-from flask_jwt_extended.exceptions import NoAuthorizationError
 from paseto.v4 import PublicKey, Ed25519PrivateKey
 import paseto
-from src.models import DiscordOAuth, User
-import configs
+from werkzeug.exceptions import Unauthorized
+
+class NoAuthorizationError(Unauthorized):
+    ...
+
+
+if TYPE_CHECKING:
+    from src.models import DiscordOAuth, User
+
 def decode_key(key_hex: str) -> PublicKey:
     secret = bytes.fromhex(key_hex)
     return PublicKey(Ed25519PrivateKey.from_private_bytes(secret))
 
 
 def sign(payload: dict[str, Any], expires: int = 900) -> str:
-    key = decode_key(configs.paseto_private_key)
+    key = decode_key(os.environ['PASETO_PRIVATE_KEY'])
     signature = paseto.encode(key, payload, exp=expires)
     return signature.decode('ascii')
 
 
 def verify(token: str) -> dict[str, Any] | None:
-    public = decode_key(configs.paseto_private_key)
+    if not token:
+        return None
+    public = decode_key(os.environ['PASETO_PRIVATE_KEY'])
     try:
-        ret = paseto.decode(public, token)
+        ret = paseto.decode(public, token, deserializer=json)
     except paseto.VerificationError:
         return None
     return ret.payload

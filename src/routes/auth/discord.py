@@ -2,8 +2,7 @@ import requests
 import os
 import secrets
 from urllib.parse import urlencode
-from flask import Blueprint, Response, redirect, request, make_response
-from flask_bcrypt import generate_password_hash, check_password_hash
+from flask import Blueprint, Response, redirect, request
 
 from src.config import *
 from src.models import DiscordOAuth, User
@@ -18,13 +17,17 @@ def login():
     Redirect to discord auth
     """
     nonce = secrets.token_urlsafe(32)
-    state_param = urlencode({
-        "state": sign({'nonce': nonce})
+    redirect_uri = request.base_url + "/callback"
+    params = urlencode({
+        "client_id": os.environ.get("DISCORD_CLIENT_ID"),
+        "redirect_uri": redirect_uri,
+        "state": sign({'nonce': nonce}),
+        "scope": "identify guilds",
+        "response_type": "code",
     })
-
-    redirect_url = os.environ["DISCORD_OAUTH_URL"] + f"&{state_param}"
+    auth_url = f'https://discord.com/api/oauth2/authorize?{params}'
     cookie = f'nonce={nonce}; SameSite=Lax; Secure; HttpOnly; Max-Age=90000; Path=/'
-    return Response(status=302, headers={'Location': redirect_url, 'Set-Cookie': cookie})
+    return Response(status=302, headers={'Location': auth_url, 'Set-Cookie': cookie})
 
 
 @discord_bp.route("/login/callback")
@@ -45,13 +48,13 @@ def callback():
         "client_secret": os.environ.get("DISCORD_CLIENT_SECRET"),
         "grant_type": "authorization_code",
         "code": token_access_code,
-        "redirect_uri": os.environ.get("DISCORD_OAUTH_REDIRECT"),
+        "redirect_uri": request.base_url,
     }
 
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
     r = requests.post(
-        f"{DISCORD_API_ENDPOINT}/oauth2/token", data=data, headers=headers
+        f"https://discord.com/api/oauth2/token", data=data, headers=headers
     )
 
     oauth_data = r.json()
