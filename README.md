@@ -5,7 +5,7 @@
 ### 1. Discord OAuth Setup
 1. Navigate to the [discord developer portal](https://discord.com/developers/applications) and create a new app
 2. On the sidebar navigate to OAuth2 > General
-3. Add `http://localhost:8081/discord/auth/login/callback` as the redirect URL
+3. Add `http://127.0.0.1:8081/discord/auth/login/callback` as the redirect URL
 
 ### 2. Google OAuth Setup
 1. Navigate to the [Google developer console](https://console.developers.google.com)
@@ -13,8 +13,8 @@
 3. To generate credentials, on the new page that appears, navigate to Credentials and
    click on `+ CREATE CREDENTIALS` on the top and select OAuth Client ID
 4. Follow the prompts and answer the questions.
-5. Add `http://localhost:8081` to authorized JavaScript origins and
-   `http://localhost:8081/google/auth/login/callback` as an authorized redirect URI
+5. Add `http://127.0.0.1:8081` to authorized JavaScript origins and
+   `http://127.0.0.1:8081/google/auth/login/callback` as an authorized redirect URI
 
 ### 2. Configuration Variables
 1. Create a new file named `.env` and add the following
@@ -27,7 +27,7 @@ DISCORD_CLIENT_SECRET="PASTE CLIENT SECRET"
 GOOGLE_CLIENT_ID=PASTE CLIENT ID
 GOOGLE_CLIENT_SECRET=PASTE CLIENT SECRET
 
-FRONTEND_URL="http://localhost:8080/"
+FRONTEND_URL="http://127.0.0.1:8080/"
 
 #DATABASE
 DB_CONNECTION_STRING="postgresql+psycopg2://user:password@hostname/database_name" 
