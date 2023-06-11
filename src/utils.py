@@ -1,6 +1,5 @@
 from __future__ import annotations
 import json
-import os
 
 import time
 from functools import wraps
@@ -9,7 +8,7 @@ from flask import Request, request
 from paseto.v4 import PublicKey, Ed25519PrivateKey
 import paseto
 from werkzeug.exceptions import Unauthorized
-
+import config
 class NoAuthorizationError(Unauthorized):
     ...
 
@@ -23,7 +22,7 @@ def decode_key(key_hex: str) -> PublicKey:
 
 
 def sign(payload: dict[str, Any], expires: int = 900) -> str:
-    key = decode_key(os.environ['PASETO_PRIVATE_KEY'])
+    key = decode_key(config.paseto_private_key)
     signature = paseto.encode(key, payload, exp=expires)
     return signature.decode('ascii')
 
@@ -31,7 +30,7 @@ def sign(payload: dict[str, Any], expires: int = 900) -> str:
 def verify(token: str) -> dict[str, Any] | None:
     if not token:
         return None
-    public = decode_key(os.environ['PASETO_PRIVATE_KEY'])
+    public = decode_key(config.paseto_private_key)
     try:
         ret = paseto.decode(public, token, deserializer=json)
     except paseto.VerificationError:

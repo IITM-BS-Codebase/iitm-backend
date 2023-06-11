@@ -1,5 +1,4 @@
 import requests
-import os
 import secrets
 from urllib.parse import urlencode
 from flask import Blueprint, Response, redirect, request
@@ -8,6 +7,7 @@ from src.config import *
 from src.models import DiscordOAuth, User
 from src.database import db
 from src.utils import sign, validate_request_state
+import config
 
 discord_bp = Blueprint("discord_bp", __name__, url_prefix='/discord/auth')
 
@@ -19,7 +19,7 @@ def login():
     nonce = secrets.token_urlsafe(32)
     redirect_uri = request.base_url + "/callback"
     params = urlencode({
-        "client_id": os.environ.get("DISCORD_CLIENT_ID"),
+        "client_id": config.discord_client_id,
         "redirect_uri": redirect_uri,
         "state": sign({'nonce': nonce}),
         "scope": "identify guilds",
@@ -44,8 +44,8 @@ def callback():
         return "invalid state",400
 
     data = {
-        "client_id": os.environ.get("DISCORD_CLIENT_ID"),
-        "client_secret": os.environ.get("DISCORD_CLIENT_SECRET"),
+        "client_id": config.discord_client_id,
+        "client_secret": config.discord_client_secret,
         "grant_type": "authorization_code",
         "code": token_access_code,
         "redirect_uri": request.base_url,
@@ -88,4 +88,4 @@ def callback():
 
         return {"Token": signed}
 
-    return redirect(os.environ["FRONTEND_URL"])
+    return redirect(config.frontend_url)

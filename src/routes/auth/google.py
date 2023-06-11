@@ -1,8 +1,8 @@
-import os
 import secrets
 from urllib.parse import urlencode
 from flask import Blueprint, Response, request
 import requests
+import config
 from src.utils import validate_request_state, sign, verify
 google_bp = Blueprint("google_bp", __name__, url_prefix='/google/auth')
 
@@ -24,7 +24,7 @@ def login():
         payload = {'nonce': nonce}
     scope = 'openid email profile'
     params = {
-        'client_id': os.environ.get("GOOGLE_CLIENT_ID"),
+        'client_id': config.google_client_id,
         'redirect_uri': redirect_uri,
         'scope': scope,
         'response_type': 'code',
@@ -48,8 +48,8 @@ def callback():
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
     data = {
         'code': code,
-        'client_id': os.environ.get("GOOGLE_CLIENT_ID"),
-        'client_secret': os.environ.get("GOOGLE_CLIENT_SECRET"),
+        'client_id': config.google_client_id,
+        'client_secret': config.google_client_secret,
         'redirect_uri': request.base_url,
         'grant_type': 'authorization_code'
     }

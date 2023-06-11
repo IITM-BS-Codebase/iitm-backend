@@ -17,24 +17,8 @@
    `http://localhost:8081/google/auth/login/callback` as an authorized redirect URI
 
 ### 2. Configuration Variables
-1. Create a new file named `.env` and add the following
-```env
-#DISCORD OAUTH DETAILS
-DISCORD_CLIENT_ID=PASTE CLIENT ID
-DISCORD_CLIENT_SECRET="PASTE CLIENT SECRET"
-
-#GOOGLE OAUTH DETAILS
-GOOGLE_CLIENT_ID=PASTE CLIENT ID
-GOOGLE_CLIENT_SECRET=PASTE CLIENT SECRET
-
-FRONTEND_URL="http://localhost:8080/"
-
-#DATABASE
-DB_CONNECTION_STRING="postgresql+psycopg2://user:password@hostname/database_name" 
-
-#SECURITY
-PASETO_PRIVATE_KEY="hex-of-private-key-bytes"  # just run `scripts/generate_keys.py` to get this for first time setup.
-```
+1. Create a new file named `config.py` and fill it in according to the instructions in
+   the stub file [`config.pyi`](config.pyi)
 
 ### Database setup
 

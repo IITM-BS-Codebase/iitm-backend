@@ -1,8 +1,7 @@
-import os
 from datetime import timedelta
-from dotenv import load_dotenv
+import config
 
-load_dotenv()
+
 """
 Configuration Variables Go Here
 """
@@ -15,9 +14,9 @@ class Config():
     WTF_CSRF_ENABLED = False
 
 class LocalDevelopmentConfig(Config):
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DB_CONNECTION_STRING")
+    SQLALCHEMY_DATABASE_URI = config.postgresql
     DEBUG = True
-    PASETO_PRIVATE_KEY = os.environ.get("PASETO_PRIVATE_KEY")
+    PASETO_PRIVATE_KEY = config.paseto_private_key
 
 
 MAIN_GUILD_ID = 1104485753758687333
