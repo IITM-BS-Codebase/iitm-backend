@@ -4,6 +4,7 @@ from flask import Blueprint, Response, request
 import requests
 import config
 from src.utils import validate_request_state, sign, verify
+from src.utils import validate_request_state, sign, link_id_with_email
 google_bp = Blueprint("google_bp", __name__, url_prefix='/google/auth')
 
 GOOGLE_OPENID_ENDPOINT = "https://accounts.google.com/.well-known/openid-configuration"
@@ -57,5 +58,22 @@ def callback():
     headers = {'Authorization': f'Bearer {token["access_token"]}', 'Accept': 'application/json'}
     user_resp = requests.get(userinfo_endpoint, headers=headers).json()
     validated['email'] = user_resp['email']
+    payload = None
+    send_webhook = False
+    try:
+        user_id = validated['_id']
+        send_webhook = True
+    except KeyError:
+        try:
+            user_id = validated['sub']
+        except KeyError:
+            pass
+        else:
+            payload = link_id_with_email(user_id, validated['email'])
+    else:
+        payload = link_id_with_email(user_id, validated['email'])
+        del validated['_id']
+    if payload is not None and send_webhook:
+        requests.post(config.ipc_endpoint, json=payload, headers={'Authorization': config.ipc_secret})
     signed = sign(validated)
     return {'Token': signed}

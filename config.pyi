@@ -15,3 +15,7 @@ paseto_private_key: str
 
 # URL of the frontend
 frontend_url: str
+
+# IPC with the bot
+ipc_endpoint: str
+ipc_secret: str

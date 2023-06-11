@@ -48,7 +48,7 @@ class DiscordOAuth(db.Model):
 
 
 class Role(db.Model):
-    __tablename__ = "role"
+    __tablename__ = "roles"
     id = db.Column(db.Integer, primary_key =True, autoincrement=True)
     name = db.Column(db.String(50), unique=True)
 
@@ -60,11 +60,9 @@ class Role(db.Model):
 
 class User(UserMixin, db.Model):
 
-    __tablename__ = "user"
+    __tablename__ = "users"
     id = db.Column(db.BigInteger, primary_key=True)
-    username = db.Column(db.String(100), unique=True)
-    discriminator = db.Column(db.Integer)
-    avatar = db.Column(db.String(100))
+    email = db.Column(db.String(100), unique=True)
     roles = db.relationship(
         'Role',
         secondary=users_roles,
@@ -75,18 +73,9 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f"{self.id}"
 
-    def __init__(self, data: dict,roles=[]) -> None:
-        self.id = data["id"]
-        self.username = data["username"]
-        self.discriminator = data["discriminator"]
-        #handle default avatars
-        if data["avatar"]:
-            self.avatar = (
-                f"{DISCORD_CDN_ENDPOINT}/avatars/{data['id']}/{data['avatar']}"
-            )
-        else:
-            self.avatar = "https://cdn.discordapp.com/embed/avatars/4.png"
-
+    def __init__(self, id: int, email: str | None = None, roles=[]) -> None:
+        self.id = id
+        self.email = email
         for role in roles:
             if to_add := Role.query.filter(Role.name == role).first():
                 self.add_role(to_add)
@@ -110,16 +99,12 @@ class User(UserMixin, db.Model):
 
         response = requests.request("GET", url, headers=headers)
         response = response.json()
-        return cls(response)
+        return cls(int(response['id']))
 
 
     def to_dict(self) -> dict:
         res = {
             "id": self.id,
-            "username": self.username,
-            "discriminator": self.discriminator,
-            "avatar": self.avatar,
-            "mfa_enabled": self.mfa_enabled,
+            'email': self.email,
         }
         return res
-    

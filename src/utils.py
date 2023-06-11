@@ -3,18 +3,31 @@ import json
 
 import time
 from functools import wraps
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 from flask import Request, request
 from paseto.v4 import PublicKey, Ed25519PrivateKey
 import paseto
 from werkzeug.exceptions import Unauthorized
 import config
+from src.models import User, DiscordOAuth
+from src.database import db
+
+
+if TYPE_CHECKING:
+    from typing_extensions import NotRequired
+
+
 class NoAuthorizationError(Unauthorized):
     ...
 
 
-if TYPE_CHECKING:
-    from src.models import DiscordOAuth, User
+class AuthResp(TypedDict):
+    code: int
+    error: NotRequired[str]
+    existing_user: NotRequired[int]
+    user_id: int
+    email: str
+
 
 def decode_key(key_hex: str) -> PublicKey:
     secret = bytes.fromhex(key_hex)
@@ -62,6 +75,45 @@ def validate_request_state(state: str, request: Request) -> dict[str, Any] | Non
     if payload['nonce'] != nonce:
         return None
     return payload
+
+
+def link_id_with_email(user_id: int, email: str) -> AuthResp:
+    # just in case idk
+    user_id = int(user_id)
+    # ORMs are the bane of my existence
+    # an obscene amount of queries
+    
+    # first, check if the user has already linked their email
+    verified = User.query.filter_by(id=user_id).one_or_none()
+    if verified:
+        return {
+            'code': 1001,
+            'error': 'User already verified',
+            'user_id': user_id,
+            'email': verified.email
+        }
+    # next, check if the email is already linked to a user
+    existing = User.query.filter_by(email=email).one_or_none()
+    if existing:
+        payload: AuthResp = {
+            'code': 1002,
+            'email': email,
+            'existing_user': existing.id,
+            'user_id': user_id,
+            'error': 'Email already linked to an account.'
+        }
+        # but we override the user id
+        User.query.filter_by(email=email).update({User.id: user_id})
+        return payload
+    # finally, link the email to the user
+    new = User(id=user_id, email=email) 
+    db.session.add(new)
+    db.session.commit()
+    return {
+        'code': 1000,
+        'email': email,
+        'user_id': user_id
+    }
 
 
 def get_current_user() -> User | None:
